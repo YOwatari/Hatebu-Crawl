@@ -67,6 +67,8 @@ def getdayslist():
 
 def BookmarkCrawl(days):
     for u in dircache.listdir('tmp/'):
+        if u == '.DS_Store':
+            continue
         crawl = HatebuCrawl(u)
         for d in days:
             print "\r %s %s %s" % (u, d, crawl.saveBookmarks(d))
