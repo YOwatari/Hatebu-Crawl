@@ -4,7 +4,7 @@
 import MeCab
 import codecs
 
-input_text = u"菅直人首相は野党の出方や世論を見極めつつ判断する考えだ。"
+input_text = u"Mecabちゃんに形態素解析してもらうんだよ．"
 
 word_class = u"名詞"
 
