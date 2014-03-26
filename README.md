@@ -1,4 +1,4 @@
-RelationScript
+ResearchScript
 ============
 
 修論関係で色々書いたスクリプト
