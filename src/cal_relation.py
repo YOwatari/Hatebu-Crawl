@@ -1,36 +1,45 @@
 #!/usr/bin python
 # -*- coding: utf-8 -*-
 
+from AcademyAward import AcademyAward as aa
+from AmazonMovies import AmazonMovies as am
+from TwitterCrawler import TwitterCrawler as tc
+
 import numpy as np
 import csv
 
-rows = []
-movies = []
+academy = aa(2010)
+aa.save_movies()
+
+amazon = am(academy.movies)
+amazon.save_movies()
+
+twitter = tc()
+movies = academy.movies + amazon.movies
+twitter.search(movies)
+
+matrix = []
 
 
-def get_movies():
-    with open('movielist.txt', 'rb') as fd:
-        for line in fd:
-            movies.append(line)
+def normalize(matrix):
+    tmp_rows = 0
+    for line in matrix:
+        tmp_sums = 0
+        for item in line:
+            tmp_sums = tmp_sums + int(item)
+        tmp_line = []
+        for item in line:
+            try:
+                tmp_line.append(float(item)/float(tmp_sums))
+            except ZeroDivisionError:
+                tmp_line.append(0.0)
+        tmp_rows.append(tmp_line)
 
-
-def normalize():
-    with open('tw/sums.csv', 'rb') as fd:
-        for line in fd:
-            row = line.split(',')
-            sums = 0
-            for i in row:
-                sums = sums + int(i)
-            tmp = []
-            for i in row:
-                try:
-                    tmp.append(float(i)/float(sums))
-                except ZeroDivisionError:
-                    tmp.append(0)
-            rows.append(tmp)
-    with open('sums_normalize.csv', 'wb') as fd:
+    with open('tw/sums_normalize.csv', 'wb') as fd:
         writer = csv.writer(fd, lineterminator='\n')
-        writer.writerows(rows)
+        writer.writerows(tmp_rows)
+
+    return tmp_rows
 
 
 def sums_tweets():
@@ -43,45 +52,60 @@ def sums_tweets():
     print sums
 
 
-def sim_cos(p1):
-    array = np.array(rows)
-    target_norm = np.linalg.norm(array[p1])
+def sim_cos(target):
+    array = np.array(matrix)
 
-    tmplist = {}
-    for i in xrange(0, len(array)):
-        if i == p1:
+    tmp_dict = []
+    for i in xrange(len(array)):
+        if i == target:
             continue
         try:
-            a = np.dot(array[p1], array[i])
-            b = target_norm*np.linalg.norm(array[i])
-            if a!=0 and b!=0:
-                tmplist[i] = a/b
-        except (ValueError):
-            tmplist[i] = 0.0
+            a = np.dot(array[target], array[i])
+            b = np.linalg.norm(array[target])*np.linalg.norm(array[i])
+            if a != 0 and b != 0:
+                tmp_dict[i] = a/b
+        except ValueError:
+            tmp_dict[i] = 0.0
 
-    output_rows = []
-    print "\nQuery: %s" % movies[p1][:-1]
-    j = 0
-    for k, v in sorted(tmplist.items(), key=lambda x:x[1], reverse=True):
-        if j < 10:
-            j = j + 1
-            if movies[k][:-1].decode('utf-8') != u"天使の分け前":
-                print "%s : %1.3f" % (movies[k][:-1], v)
-                output_rows.append([movies[p1][:-1], movies[k][:-1], v])
-    return output_rows
+    output = []
+    for k, v in sorted(tmp_dict.items(), key=lambda x:x[1], reverse=True):
+        if movies[k][:-1].decode('utf-8') != u"天使の分け前":
+            output.append({
+                'title': movies[k][:-1],
+                'value': v
+            })
+    return output[0:10]
 
 
 if __name__ == "__main__":
-    normalize()
-    get_movies()
-    output = []
-    query2010 = [52, 83, 184, 132, 203, 76, 15, 141, 90, 111]
-    query2011 = [38, 102, 51, 43, 98, 23, 192, 91, 32]
-    query2012 = [151, 164, 155, 7, 79, 140, 127, 122]
-    query2013 = [195, 27, 154, 117, 42, 82, 146, 0, 105]
-    for q in query2010+query2011+query2012+query2013:
-        output = output + sim_cos(q)
+    matrix = normalize(twitter.matrix)
+    # query2010 = [52, 83, 184, 132, 203, 76, 15, 141, 90, 111]
+    # query2011 = [38, 102, 51, 43, 98, 23, 192, 91, 32]
+    # query2012 = [151, 164, 155, 7, 79, 140, 127, 122]
+    # query2013 = [195, 27, 154, 117, 42, 82, 146, 0, 105]
+    movies_dict = []
+    for i, movie in enumerate(academy.movies):
+        movies_dict.append({
+            'title': movie,
+            'relations': sim_cos(i),
+            'similars': amazon.movies_dict[i]['similars']
+        })
 
-    with open('OUTPUUUUUUUUT.csv', 'wb') as fd:
-        writer = csv.writer(fd, lineterminator='\n')
-        writer.writerows(output)
+    outrows = []
+    for movie in movies_dict:
+        tmpline = []
+        for i in movie['relations']:
+            tmpline.append({
+                'title': movies['title'],
+                'rank': i,
+                'relations': movie['relations'][i],
+                'similars': movie['similars'][i]
+            })
+        outrows.append(tmpline)
+
+    params = ['title', 'rank', 'relations', 'similars']
+    header = dict([(v, v) for v in params])
+    outrows.insert(0, header)
+    with open('OUTPUT.csv', 'wb') as fd:
+        writer = csv.DictWriter(fd, params, extrasaction='ignore')
+        writer.writerows(outrows)

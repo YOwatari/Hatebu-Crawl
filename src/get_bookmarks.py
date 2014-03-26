@@ -1,65 +1,84 @@
 #!/usr/bin python
 # -*- coding: utf-8 -*-
 
+from HatebuCrawl import HatebuCrawl
+
 import json
-import os
-import requests
+import time
+import sys
+import dircache
+
+# 取得ユーザ
+user = "wata88"
 
 
-class HatebuCrawl(object):
-    def __init__(self, user):
-        self.__current = user
-        self.setUser()
-        self.favJson = None
-        self.Feed = None
-        self.NextFeed = False
+def favCrawl(fav):
+    # カウンター
+    fav_count = 0
+    fav_users = 0
+    favfav_count = 0
+    favfav_users = 0
+    all_count = 0
 
-    def setUser(self):
-        # ユーザー関連情報をセットする
-        self.__dirs = "tmp/" + self.__current + "/"
-        self.__filepath = self.__dirs + "favorites.json"
-        self.__favorites_url = "http://www.hatena.ne.jp/" + \
-            self.__current + "/favorites.json"
-        self.bookmarks_url = "http://b.hatena.ne.jp/" + \
-            self.__current + "/atomfeed"
+    # お気に入りのお気に入りまでクロール
+    jo = json.loads(fav)
+    fav_users = len(jo['favorites'])
+    for fav in jo['favorites']:
+        # お気に入りユーザがいたら
+        if fav['name']:
+            fav_count = fav_count + 1
+            tmp = HatebuCrawl(fav['name'])
+            # アクセス制御(省エネ)
+            time.sleep(0.05)
+            try:
+                favfavJO = json.loads(tmp.getFavorites())
+            except Exception as e:
+                sys.stdout.write(
+                    "\r Fav(%d/%d): %s FavFav: None" %
+                    (fav_count, fav_users, fav['name']))
+                continue
+            tmp.saveFavorites()
+            favfav_users = len(favfavJO['favorites'])
+            for favfav in favfavJO['favorites']:
+                favfav_count = favfav_count + 1
+                if favfav['name']:
+                    sys.stdout.write(
+                        "\r Fav(%d/%d): %s FavFav(%d/%d): %s" %
+                        (fav_count, fav_users, fav['name'],
+                            favfav_count, favfav_users, favfav['name']))
+        all_count = all_count + favfav_count
+        favfav_count = 0
+    # 最後に合計値を出力
+    print "\n\nCrawled All Users: %d\n" % int(fav_users + all_count + 1)
 
-    def getFavorites(self):
-        # お気に入りユーザを取得する
-        if self.favJson is None:
-            if os.path.exists(self.__filepath):
-                self.favJson = json.load(open(self.__filepath, 'rb'))
-            else:
-                try:
-                    r = requests.get(self.__favorites_url)
-                except requests.exceptions.RequestException as e:
-                    return str(e)
-                self.favJson = r.json()
-        return json.dumps(self.favJson, sort_keys=True, indent=4)
+def getdayslist():
+    # 日時の準備(とりあえず先月で)
+    import datetime
+    from dateutil.relativedelta import relativedelta
+    from calendar import Calendar
 
-    def saveFavorites(self):
-        # お気に入りユーザをファイルに保存する
-        if self.favJson is None:
-            self.getFavorites()
-        if not os.path.exists(self.__dirs):
-            os.makedirs(self.__dirs)
-        json.dump(self.favJson, open(self.__filepath, 'wb'),
-                  sort_keys=True, indent=4)
-        return "Favorites json file saved."
+    prev = datetime.date.today() - relativedelta(months=1)
+    cal = Calendar(firstweekday=6)
+    dayslist = []
+    for d in cal.itermonthdays(prev.year, prev.month):
+        if d != 0:
+            dayslist.append("%d%d%02d" % (prev.year, prev.month, d))
+    return dayslist
 
-    def getBookmarks(self, date):
-        # 指定日時のブックマークを得る
-        try:
-            r = requests.get(self.bookmarks_url, params={'date': date})
-        except requests.exceptions.RequestException as e:
-            return str(e)
-        self.Feed = r
-        return self.Feed.text
+def BookmarkCrawl(days):
+    for u in dircache.listdir('tmp/'):
+        if u == '.DS_Store':
+            continue
+        crawl = HatebuCrawl(u)
+        for d in days:
+            print "\r %s %s %s" % (u, d, crawl.saveBookmarks(d))
+            time.sleep(0.05)
 
-    def saveBookmarks(self, date):
-        # 指定日時のブックマークをファイルに保存する
-        _ = self.getBookmarks(date)
+if __name__ == "__main__":
+    print "User: %s\n" % user
 
-        with open(self.__dirs + "/" + date + ".xml", 'wb') as fd:
-            for chunk in self.Feed.iter_content(100):
-                fd.write(chunk)
-        return "Bookmarks feed file saved."
+    #h = HatebuCrawl(user)
+    dlist = getdayslist()
+    BookmarkCrawl(dlist)
+    #h.saveFavorites()
+    #favCrawl(h.getFavorites())
