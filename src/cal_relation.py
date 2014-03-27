@@ -8,21 +8,23 @@ from TwitterCrawler import TwitterCrawler as tc
 import numpy as np
 import csv
 
-academy = aa(2010)
-aa.save_movies()
+academy = aa(2013)
+academy.save_movies()
 
 amazon = am(academy.movies)
 amazon.save_movies()
 
 twitter = tc()
 movies = academy.movies + amazon.movies
-twitter.search(movies)
+twitter.get_tweets(movies)
+twitter.save_matrix()
+twitter.save_users()
 
 matrix = []
 
 
 def normalize(matrix):
-    tmp_rows = 0
+    tmp_rows = []
     for line in matrix:
         tmp_sums = 0
         for item in line:
@@ -75,7 +77,6 @@ def sim_cos(target):
                 'value': v
             })
     return output[0:10]
-
 
 if __name__ == "__main__":
     matrix = normalize(twitter.matrix)

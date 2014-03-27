@@ -37,6 +37,7 @@ class TwitterCrawler(object):
                     + tweet.text.encode('utf-8') + "\n"
                 )
                 self.users.append(tweet.user.id)
+        return
 
     def get_tweets(self, movies):
         for i in xrange(len(movies)):
@@ -56,9 +57,9 @@ class TwitterCrawler(object):
                 elif j < i:
                     sums.append(0)
                 else:
-                    query = movies[i]+" "+movies[j]
-                    query = query.decode('utf-8')
+                    query = movies[i] + " " + movies[j]
                     try:
+                        print "[%d/%d] %s" % (j, len(movies), query)
                         tweets = self.search(query)
                         if len(tweets) > 0:
                             self.save_tweets(query, tweets)
@@ -68,14 +69,20 @@ class TwitterCrawler(object):
                         print str(e)
                         continue
             self.matrix.append(sums)
+        print "TwitterCrawler done."
+        return
 
     def save_matrix(self, path="sums.csv"):
         with open('tw/' + path, 'wb') as fd:
             writer = csv.writer(fd, lineterminator='\n')
             writer.writerows(self.matrix)
+        print "TwitterCrawler matrix saved."
+        return
 
     def save_users(self, path="users.txt"):
         users = list(set(self.users))
         with open('tw/' + path, 'wb') as fd:
             for user in users:
                 fd.write(str(user) + "\n")
+        print "TwitterCrawler users saved."
+        return

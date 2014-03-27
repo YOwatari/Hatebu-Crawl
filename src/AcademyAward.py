@@ -34,10 +34,12 @@ class AcademyAward(object):
                     title = pq(tr)("td:eq(0)").text()
                     if "" != title:
                         self.movies.append(patrn.split(title)[0])
+        print "AcademyAward done."
         return
 
     def save_movies(self, path="AcademyAwardMovies.csv"):
         with open(path, 'wb') as fd:
             for movie in self.movies:
-                fd.write(movie + '\n')
+                fd.write(movie.encode('utf-8') + '\n')
+        print "AcademyAward saved."
         return
