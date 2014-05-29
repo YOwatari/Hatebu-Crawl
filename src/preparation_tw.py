@@ -81,4 +81,8 @@ def main(input, output):
 
 if __name__ == "__main__":
     for i in xrange(207):
-        main(u'tmp/中間発表/tw/'+unicode(i)+u'_*.txt', u'tmp/csv/'+unicode(i)+u'_output.csv')
+        main(
+            u'tmp/中間発表/tw/'+unicode(i)+u'_*.txt',
+            u'tmp/csv/'+unicode(i)+u'_output.csv'
+        )
+
